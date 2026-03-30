@@ -19,6 +19,6 @@ services:
     startCommand: node app-mcp-server.js
     envVars:
       - key: AGENT_API_URL
-        value: https://agent-chat-rest-api.onrender.com
+        value: http://agent-chat-rest-api:3001
       - key: MCP_PORT
         value: 8787
