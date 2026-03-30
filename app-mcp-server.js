@@ -19,6 +19,8 @@ const AGENT_API = process.env.AGENT_API_URL ?? "http://localhost:3001";
 const PORT = process.env.MCP_PORT ?? 8787;
 const MCP_PATH = "/mcp";
 
+console.log("MCP server config:", { AGENT_API, PORT, MCP_PATH });
+
 // Input schemas for tools
 const sendMessageSchema = {
   message: z.string().min(1, "Message cannot be empty"),
@@ -31,21 +33,25 @@ async function callAgent(message, sessionId) {
   const url = new URL("/chat", AGENT_API);
   const sessionId_ = sessionId ?? `session_${Date.now()}`;
 
-  const response = await fetch(url.toString(), {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      messages: [{ role: "user", content: message }],
-      session_id: sessionId_,
-    }),
-  });
+  let response;
+  try {
+    response = await fetch(url.toString(), {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        messages: [{ role: "user", content: message }],
+        session_id: sessionId_,
+      }),
+    });
+  } catch (err) {
+    throw new Error(`Agent API fetch failed: ${err.message}`);
+  }
 
   if (!response.ok) {
-    throw new Error(
-      `Agent API error ${response.status}: ${await response.text()}`
-    );
+    const text = await response.text().catch(() => "<body read error>");
+    throw new Error(`Agent API error ${response.status}: ${text}`);
   }
 
   // Collect streamed response
