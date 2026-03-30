@@ -1,0 +1,20 @@
+{
+  "name": "agent-chat",
+  "version": "1.0.0",
+  "description": "ChatGPT-style UI for your n8n agent via OpenAI Agents SDK",
+  "type": "module",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js"
+  },
+  "dependencies": {
+    "cors": "^2.8.6",
+    "dotenv": "^16.6.1",
+    "express": "^4.22.1",
+    "openai": "^4.104.0"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC"
+}
