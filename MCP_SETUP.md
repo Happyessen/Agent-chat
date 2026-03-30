@@ -1,13 +1,24 @@
-# OpenAI App Integration Guide
+# OpenAI Apps SDK Integration Guide
 
-Your agent-chat is now configured to work as an **OpenAI App with Tool Integration** support!
+Your agent-chat is now configured as a **proper OpenAI App** using the **Apps SDK** with **MCP Protocol**.
 
 ## What's New?
 
-✅ **OpenAI App Server** (`openai-app-server.js`) - Exposes your agent as callable tools for OpenAI Apps  
-✅ **REST API Tools** - Simple HTTP endpoints for tool execution  
-✅ **OpenAPI Spec** - Automatic API documentation for OpenAI discovery  
-✅ **Production Ready** - Hosted on Render at `https://agent-chat-77l2.onrender.com/`
+✅ **MCP Server** (`app-mcp-server.js`) - Follows OpenAI's Apps SDK quickstart pattern  
+✅ **Native MCP Protocol** - Uses `/mcp` endpoint that ChatGPT expects  
+✅ **Registered Tools** - `send_message` and `check_agent_health` callable by ChatGPT  
+✅ **Optional UI Component** - Dashboard rendered inside ChatGPT (included)  
+✅ **Production Ready** - Deploy to Render
+
+---
+
+## What Changed
+
+This is **different from the REST API approach**. Now you're building a proper **OpenAI App** that:
+- Uses **Model Context Protocol (MCP)** - the standard for ChatGPT integrations
+- Exposes a **`/mcp` endpoint** (not REST endpoints)
+- Registers **tools** that ChatGPT can discover and call
+- Can include **UI components** rendered in ChatGPT's interface
 
 ---
 
@@ -19,196 +30,185 @@ Your agent-chat is now configured to work as an **OpenAI App with Tool Integrati
 npm install
 ```
 
-This installs all required packages. The OpenAI App server has **no additional dependencies** — it uses only Express and CORS from your existing setup.
+New packages added:
+- `@modelcontextprotocol/sdk` - MCP protocol implementation
+- `@modelcontextprotocol/ext-apps` - OpenAI Apps SDK helpers
+- `zod` - Input validation for tools
 
 ### 2. Local Testing (Development)
 
-**Terminal 1** - Start your REST API:
+**Terminal 1** - Start your REST API (unchanged):
 ```bash
 node server.js
 ```
 Runs on `http://localhost:3001`
 
-**Terminal 2** - Start the OpenAI App Server:
+**Terminal 2** - Start the MCP App Server (NEW):
 ```bash
-node openai-app-server.js
+node app-mcp-server.js
 ```
-Runs on `http://localhost:3002`
+Runs on `http://localhost:8787/mcp`
+
+### 3. Expose to Public Internet (for development)
+
+ChatGPT needs to reach your server. Use **ngrok** to create a tunnel:
+
+```bash
+npm install -g ngrok
+ngrok http 8787
+```
+
+You'll get a URL like: `https://abc123.ngrok.app`
+
+Your MCP endpoint becomes: `https://abc123.ngrok.app/mcp`
 
 ---
 
 ## Deployment on Render
 
-### Deploy Both Services
+### Deploy the MCP Server Service
 
-Update your `render.yaml`:
+Create a **new Web Service** on Render with:
 
-```yaml
-services:
-  - type: web
-    name: agent-chat-rest-api
-    runtime: node
-    buildCommand: npm install
-    startCommand: node server.js
-    envVars:
-      - key: OPENAI_API_KEY
-        sync: false
-      - key: N8N_WEBHOOK_URL
-        sync: false
+**Build Command**:
+```bash
+npm install
+```
 
-  - type: web
-    name: agent-chat-openai-app
-    runtime: node
-    buildCommand: npm install
-    startCommand: node openai-app-server.js
-    envVars:
-      - key: AGENT_API_URL
-        value: https://agent-chat-rest-api.onrender.com
-      - key: PUBLIC_URL
-        value: https://agent-chat-openai-app.onrender.com
+**Start Command**:
+```bash
+node app-mcp-server.js
+```
+
+**Environment Variables**:
+```
+AGENT_API_URL=https://agent-chat-rest-api.onrender.com
+PORT=8787
+```
+
+This creates your public MCP endpoint at: `https://agent-chat-mcp.onrender.com/mcp`
+
+---
+
+## Connecting to ChatGPT
+
+### 1. Enable Developer Mode
+In ChatGPT:
+- Go **Settings → Apps & Connectors → Advanced settings**
+- Enable **Developer mode**
+
+### 2. Create a Connector
+- **Settings → Connectors → Create**
+- Paste your MCP URL: `https://your-domain.onrender.com/mcp` (or your ngrok URL)
+- Name it: "Agent Chat"
+- Add description: "Connect to your n8n agent for analysis and automation"
+- **Create**
+
+### 3. Use in a Chat
+- Open a new chat
+- Click **More** (after the + button)
+- Select **Agent Chat** connector
+- Start chatting!
+
+Example prompts:
+```
+"Analyze the Wiyyak campaign from Zain"
+"Is my agent online?"
+"Get data on the travelling campaign"
 ```
 
 ---
 
-## Connecting to OpenAI Apps
+## Tools Available in ChatGPT
 
-### Using OpenAI's App Store
+### 1. **send_message**
+Send a message to your n8n agent and get a formatted response.
 
-1. **Get the OpenAI Manifest URL**:
-   ```
-   https://agent-chat-openai-app.onrender.com/.well-known/openai.json
-   ```
+**Parameters**:
+- `message` (required): Your question or command
+- `session_id` (optional): Continue a conversation session
 
-2. **In OpenAI Platform**:
-   - Go to "Custom GPTs" or "Apps"
-   - Click "Create new"
-   - Select "Connect to API"
-   - Paste the manifest URL above
-   - Authorize and use
-
-### Manual API Integration
-
-1. **Get Available Tools**:
-   ```bash
-   curl https://agent-chat-openai-app.onrender.com/tools
-   ```
-
-2. **Execute a Tool**:
-   ```bash
-   curl -X POST https://agent-chat-openai-app.onrender.com/tools/execute \
-     -H "Content-Type: application/json" \
-     -d '{
-       "tool_id": "send_agent_message",
-       "parameters": {
-         "message": "Analyze the Wiyyak campaign"
-       }
-     }'
-   ```
-
----
-
-## Environment Variables
-
-Update your `.env` file:
-
-```env
-OPENAI_API_KEY=sk-...                                    # For your REST API
-N8N_WEBHOOK_URL=https://your-n8n.com/webhook/xyz        # For n8n integration
-AGENT_API_URL=https://agent-chat-rest-api.onrender.com  # For OpenAI App server
-PUBLIC_URL=https://agent-chat-openai-app.onrender.com   # Your public OpenAI App URL
-PORT=3001                                                 # REST API port (optional)
+**Example**:
 ```
+"Analyze the Wiyyak campaign from Zain Bahrain"
+```
+
+### 2. **check_agent_health**
+Check if your agent is online and responding.
+
+No parameters needed.
 
 ---
 
 ## API Reference
 
-### REST API (Original)
-```
-POST /chat
-Content-Type: application/json
+### MCP Endpoint Structure
 
-{
-  "messages": [
-    {"role": "user", "content": "Your question here"}
-  ],
-  "session_id": "optional_session_id"
-}
+```
+HTTP POST/GET/DELETE https://your-domain.com/mcp
 ```
 
-### OpenAI App Endpoints (New)
+The MCP protocol handles JSON-RPC messages. ChatGPT communicates directly with this endpoint.
 
-**1. List Tools**
+### Health Check Endpoint
+
 ```
-GET /tools
-```
+GET http://localhost:8787/health
+
 Response:
-```json
 {
-  "tools": [
-    {
-      "id": "send_agent_message",
-      "name": "Send Agent Message",
-      "description": "...",
-      "parameters": { ... }
-    }
-  ]
+  "status": "ok",
+  "timestamp": "2026-03-30T..."
 }
-```
-
-**2. Execute Tool**
-```
-POST /tools/execute
-Content-Type: application/json
-
-{
-  "tool_id": "send_agent_message",
-  "parameters": {
-    "message": "Your question here",
-    "session_id": "optional_session_id"
-  }
-}
-```
-
-**3. Get OpenAI Manifest**
-```
-GET /.well-known/openai.json
-```
-Returns OpenAI app discovery metadata
-
-**4. Get OpenAPI Specification**
-```
-GET /openapi.json
-```
-Returns full OpenAPI 3.0 specification
-
-**5. Health Check**
-```
-GET /health
 ```
 
 ---
 
-## Testing the OpenAI App Server
+## Testing Locally
 
-Test locally:
+### Test with MCP Inspector
 
 ```bash
-# Check if server is running
-curl http://localhost:3002/health
+npx @modelcontextprotocol/inspector@latest \
+  --server-url http://localhost:8787/mcp \
+  --transport http
+```
 
-# List available tools
-curl http://localhost:3002/tools
+This opens a browser interface to test your tools.
 
-# Execute a tool
-curl -X POST http://localhost:3002/tools/execute \
-  -H "Content-Type: application/json" \
-  -d '{
-    "tool_id": "send_agent_message",
-    "parameters": {
-      "message": "Analyze the Wiyyak campaign from Zain"
-    }
-  }'
+### Simple Health Check
+
+```bash
+curl http://localhost:8787/health
+```
+
+---
+
+## File Structure
+
+```
+agent-chat/
+├── server.js              # Original REST API (unchanged)
+├── app-mcp-server.js      # NEW: OpenAI App MCP Server
+├── index.html             # Web UI (unchanged)
+├── package.json           # Updated dependencies
+└── .env                   # Configuration
+```
+
+---
+
+## Environment Variables
+
+Update your `.env`:
+
+```env
+# REST API (unchanged)
+OPENAI_API_KEY=sk-...
+N8N_WEBHOOK_URL=https://your-n8n.com/webhook/xyz
+PORT=3001
+
+# MCP Server (new)
+AGENT_API_URL=https://agent-chat-rest-api.onrender.com
 ```
 
 ---
@@ -217,34 +217,26 @@ curl -X POST http://localhost:3002/tools/execute \
 
 | Issue | Solution |
 |-------|----------|
-| OpenAI App can't find your server | Check `PUBLIC_URL` in `.env`, ensure it's publicly accessible |
-| Tools not executing | Verify `AGENT_API_URL` points to running REST API server |
-| Timeout errors | Check if REST API (`http://localhost:3001`) is running |
-| CORS errors | OpenAI App server includes CORS headers automatically |
-
----
-
-## Next Steps
-
-1. **Test locally** - Run both servers and test tools
-2. **Deploy to Render** - Push code with new `openai-app-server.js`
-3. **Connect to OpenAI** - Use the manifest URL to register your app
-4. **Monitor** - Check Render logs for any issues
+| ChatGPT can't connect | Verify `/mcp` URL is publicly accessible, check firewall |
+| "Not Found" error on `/mcp` | Make sure you're using `app-mcp-server.js`, not `server.js` |
+| Tools not appearing | Refresh the connector in ChatGPT settings |
+| Agent not responding | Verify `AGENT_API_URL` points to running REST API |
+| ngrok tunnel expires | Reinstall package, ngrok free tier has 2-hour limit per session |
 
 ---
 
 ## Architecture Overview
 
 ```
-OpenAI Platform / OpenAI App
+ChatGPT / OpenAI Platform
         ↓
-   REST API Call to /tools/execute
+   MCP Protocol (JSON-RPC)
         ↓
-  openai-app-server.js
+  app-mcp-server.js (/mcp)
         ↓
-   REST API Call to /chat
+   REST API Call
         ↓
-  server.js (Your Agent API)
+  server.js (/chat)
         ↓
   OpenAI Agents SDK
         ↓
@@ -253,11 +245,22 @@ OpenAI Platform / OpenAI App
 
 ---
 
-## Files
+## Next Steps
 
-- **`openai-app-server.js`** - OpenAI App integration server (NEW)
-- **`server.js`** - Original REST API (unchanged)
-- **`index.html`** - Web UI (unchanged)
-- **`.well-known/openai.json`** - Auto-generated on `/` endpoint
+1. **Test locally** with `node app-mcp-server.js`
+2. **Expose to internet** using ngrok
+3. **Add to ChatGPT** via Settings → Connectors
+4. **Deploy to Render** for production
+5. **Iterate** on tools and UI
 
-Made with ❤️
+---
+
+## Resources
+
+- [OpenAI Apps SDK Quickstart](https://developers.openai.com/apps-sdk/quickstart) - Official guide
+- [MCP Specification](https://modelcontextprotocol.io/) - Protocol details
+- [Examples](https://github.com/openai/openai-apps-sdk-examples) - Code samples
+
+---
+
+Made with ❤️ using OpenAI Apps SDK

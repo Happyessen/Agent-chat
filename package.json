@@ -7,13 +7,17 @@
   "scripts": {
     "start": "node server.js",
     "dev": "node --watch server.js",
-    "start:openai-app": "node openai-app-server.js"
+    "start:app": "node app-mcp-server.js"
   },
   "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.20.2",
+    "@modelcontextprotocol/ext-apps": "^1.0.1",
+    "@modelcontextprotocol/inspector": "^0.2.0",
     "cors": "^2.8.6",
     "dotenv": "^16.6.1",
     "express": "^4.22.1",
-    "openai": "^4.104.0"
+    "openai": "^4.104.0",
+    "zod": "^3.25.76"
   },
   "keywords": [],
   "author": "",
