@@ -1,0 +1,26 @@
+services:
+  - type: web
+    name: agent-chat-rest-api
+    runtime: node
+    buildCommand: npm install
+    startCommand: node server.js
+    envVars:
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: N8N_WEBHOOK_URL
+        sync: false
+      - key: PORT
+        value: 3001
+
+  - type: web
+    name: agent-chat-openai-app
+    runtime: node
+    buildCommand: npm install
+    startCommand: node openai-app-server.js
+    envVars:
+      - key: AGENT_API_URL
+        value: https://agent-chat-rest-api.onrender.com
+      - key: PUBLIC_URL
+        value: https://agent-chat-openai-app.onrender.com
+      - key: PORT
+        value: 3002
