@@ -13,14 +13,12 @@ services:
         value: 3001
 
   - type: web
-    name: agent-chat-openai-app
+    name: agent-chat-mcp
     runtime: node
     buildCommand: npm install
-    startCommand: node openai-app-server.js
+    startCommand: node app-mcp-server.js
     envVars:
       - key: AGENT_API_URL
         value: https://agent-chat-rest-api.onrender.com
-      - key: PUBLIC_URL
-        value: https://agent-chat-openai-app.onrender.com
-      - key: PORT
-        value: 3002
+      - key: MCP_PORT
+        value: 8787
