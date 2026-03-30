@@ -118,6 +118,7 @@ function createAppServer() {
       description:
         "Send a message to your n8n agent and get a formatted response. Use this for campaign analysis, data retrieval, and complex queries.",
       inputSchema: sendMessageSchema,
+      _meta: {},
     },
     async (args) => {
       const message = args?.message;
@@ -153,6 +154,7 @@ function createAppServer() {
       title: "Check Agent Health",
       description: "Check if the agent service is online and responding",
       inputSchema: {},
+      _meta: {},
     },
     async () => {
       try {
