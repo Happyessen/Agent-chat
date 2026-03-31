@@ -68,7 +68,24 @@ async function callAgent(message, sessionId) {
     throw new Error(`Agent API error ${response.status}: ${text}`);
   }
 
-  // Collect streamed response
+  // Check if response is JSON (direct n8n call) or SSE (agent loop)
+  const contentType = response.headers.get('content-type');
+  if (contentType && contentType.includes('application/json')) {
+    // Direct JSON response
+    const jsonData = await response.json();
+    if (jsonData.type === "n8n_direct" && jsonData.result) {
+      return {
+        message: jsonData.result,
+        session_id: sessionId_,
+      };
+    }
+    return {
+      message: jsonData.result || jsonData.message || "Response received",
+      session_id: sessionId_,
+    };
+  }
+
+  // Collect streamed SSE response
   const reader = response.body.getReader();
   const decoder = new TextDecoder();
   let fullText = "";
@@ -153,37 +170,9 @@ function createAppServer() {
       try {
         const result = await callAgent(message, args?.session_id);
         
-        // Parse structured content from the response
-        // The agent response is in markdown/text format
-        // We'll extract campaign data for the UI to display
-        const parsedData = {
-          message: result.message,
-          session_id: result.session_id,
-          theme: "Campaign Plan",
-          description: result.message.substring(0, 200) + "...",
-          audience: [],
-          messaging: [],
-          insights: [],
-        };
-
-        // Extract sections from markdown response
-        const sections = result.message.split("###");
-        sections.forEach((section) => {
-          if (section.includes("Audience")) {
-            const lines = section.split("\n").filter(l => l.trim().startsWith("-"));
-            parsedData.audience = lines.map(l => l.replace(/^-\s*/, "").trim());
-          } else if (section.includes("Messaging") || section.includes("Campaign Message")) {
-            const lines = section.split("\n").filter(l => l.trim().startsWith("-"));
-            parsedData.messaging = lines.map(l => l.replace(/^-\s*/, "").trim());
-          } else if (section.includes("Insights") || section.includes("Observations")) {
-            const lines = section.split("\n").filter(l => l.trim().startsWith("-"));
-            parsedData.insights = lines.map(l => l.replace(/^-\s*/, "").trim());
-          }
-        });
-        
         return {
           content: [{ type: "text", text: result.message }],
-          structuredContent: parsedData,
+          structuredContent: null, // No structured content, just raw response
         };
       } catch (err) {
         return {

@@ -475,13 +475,7 @@ function handleToolResult(params) {
   const area = document.getElementById("content-area");
   area.innerHTML = "";
 
-  // Try structured content first
-  if (params?.structuredContent) {
-    renderStructured(params.structuredContent, area);
-    return;
-  }
-
-  // Fall back to raw text / markdown
+  // Get the raw text response
   const raw =
     params?.content?.[0]?.text ??
     params?.result ??
@@ -497,130 +491,81 @@ function handleToolResult(params) {
 
 // ── Render structured JSON ────────────────────────────────────────────────────
 function renderStructured(data, area) {
-  // Campaign overview
-  if (data.theme || data.description) {
-    const card = makeCard("📋 Campaign Overview");
-    const body = card.querySelector(".result-card-body");
-
-    if (data.theme) {
-      const chip = document.createElement("div");
-      chip.className = "stat-row";
-      chip.innerHTML = `<span class="stat-chip">${esc(data.theme)}</span>`;
-      body.appendChild(chip);
-    }
-    if (data.description) {
-      const p = document.createElement("p");
-      p.className = "md-content";
-      p.style.cssText = "font-size:13px;color:var(--text);margin-top:8px";
-      p.textContent = data.description;
-      body.appendChild(p);
-    }
-    area.appendChild(card);
-  }
-
-  // Audience
-  if (Array.isArray(data.audience)) {
-    const card = makeCard("👥 Target Audience");
-    card.querySelector(".result-card-body").innerHTML =
-      `<ul class="md-content">${data.audience.map(i => `<li>${esc(i)}</li>`).join("")}</ul>`;
-    area.appendChild(card);
-  }
-
-  // Messaging
-  if (Array.isArray(data.messaging)) {
-    const card = makeCard("💬 Key Messaging");
-    card.querySelector(".result-card-body").innerHTML =
-      `<ul class="md-content">${data.messaging.map(i => `<li>${esc(i)}</li>`).join("")}</ul>`;
-    area.appendChild(card);
-  }
-
-  // Insights
-  if (Array.isArray(data.insights)) {
-    const card = makeCard("📈 Insights");
-    card.querySelector(".result-card-body").innerHTML =
-      `<ul class="md-content">${data.insights.map(i => `<li>${esc(i)}</li>`).join("")}</ul>`;
-    area.appendChild(card);
-  }
-
-  // Posts
-  if (Array.isArray(data.posts)) {
-    const card = makeCard("📱 Campaign Posts");
-    const grid = document.createElement("div");
-    grid.className = "post-grid";
-    data.posts.forEach((post, i) => {
-      const pc = document.createElement("div");
-      pc.className = "post-card";
-      pc.innerHTML = `
-        <div class="post-card-label">Post ${String.fromCharCode(65 + i)}</div>
-        <div class="post-card-caption">${esc(post.caption ?? "")}</div>
-        <div class="post-card-meta">
-          ${post.likes != null ? `<span class="post-meta-tag likes">♥ ${post.likes}</span>` : ""}
-          ${post.link ? `<a class="post-link" href="${esc(post.link)}" target="_blank">View post ↗</a>` : ""}
-        </div>`;
-      grid.appendChild(pc);
-    });
-    card.querySelector(".result-card-body").appendChild(grid);
-    area.appendChild(card);
-  }
-
-  addActions(area);
+  // This function is no longer used - we display raw markdown instead
+  renderMarkdown(data.message || JSON.stringify(data), area);
 }
 
 // ── Render raw markdown ───────────────────────────────────────────────────────
 function renderMarkdown(text, area) {
-  // Detect if response has campaign posts structure
-  const hasPostLinks = /\[View post\]/i.test(text) || /instagram\.com/i.test(text);
-
-  if (hasPostLinks) {
-    // Split into sections by ## headings
-    const sections = splitBySections(text);
-    sections.forEach(({ title, body }) => {
-      const icon = getSectionIcon(title);
-      const card = makeCard(`${icon} ${title || "Overview"}`);
-      card.querySelector(".result-card-body").innerHTML = renderMdToHtml(body);
-      area.appendChild(card);
-    });
-  } else {
-    // Single card with full markdown
-    const card = makeCard("📋 Campaign Results");
-    card.querySelector(".result-card-body").innerHTML = renderMdToHtml(text);
-    area.appendChild(card);
-  }
-
+  // Simple card with the raw response
+  const card = makeCard("📋 Campaign Results");
+  const body = card.querySelector(".result-card-body");
+  
+  // Basic markdown rendering
+  const html = renderMdToHtml(text);
+  body.innerHTML = html;
+  
+  area.appendChild(card);
   addActions(area);
 }
 
-function splitBySections(text) {
-  const lines = text.split("\n");
-  const sections = [];
-  let current = { title: "", body: "" };
+function renderMdToHtml(text) {
+  // Protect code blocks
+  const blocks = [];
+  text = text.replace(/```[\s\S]*?```/g, m => { blocks.push(m); return `\x00CODE${blocks.length-1}\x00`; });
+
+  let h = esc(text);
+
+  // Restore code blocks
+  h = h.replace(/\x00CODE(\d+)\x00/g, (_, i) =>
+    `<pre style="background:var(--surface-2);border:1px solid var(--border);border-radius:6px;padding:10px;overflow-x:auto;font-size:12px;font-family:monospace">${esc(blocks[+i].replace(/```\w*\n?|```/g,"").trim())}</pre>`
+  );
+
+  // Inline code
+  h = h.replace(/`([^`]+)`/g, "<code>$1</code>");
+  // Bold
+  h = h.replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>");
+  // Italic
+  h = h.replace(/\*(.+?)\*/g, "<em>$1</em>");
+  // Links
+  h = h.replace(/\[([^\]]+)\]\((https?:\/\/[^\)]+)\)/g,
+    '<a href="$2" target="_blank" rel="noopener">$1 ↗</a>');
+
+  // Process lines
+  const lines = h.split("\n");
+  const out = [];
+  let inUl = false, inOl = false;
+
+  const closeList = () => {
+    if (inUl) { out.push("</ul>"); inUl = false; }
+    if (inOl) { out.push("</ol>"); inOl = false; }
+  };
 
   for (const line of lines) {
-    const h2 = line.match(/^##\s+(.+)/);
-    if (h2) {
-      if (current.body.trim()) sections.push(current);
-      current = { title: h2[1].trim(), body: "" };
-    } else {
-      current.body += line + "\n";
+    if (/^### /.test(line)) { closeList(); out.push(`<h3>${line.slice(4)}</h3>`); continue; }
+    if (/^## /.test(line))  { closeList(); out.push(`<h2>${line.slice(3)}</h2>`); continue; }
+    if (/^# /.test(line))   { closeList(); out.push(`<h2>${line.slice(2)}</h2>`); continue; }
+    if (/^---+$/.test(line.trim())) { closeList(); out.push("<hr>"); continue; }
+
+    const ul = line.match(/^[\-\*] (.+)/);
+    if (ul) {
+      if (!inUl) { if (inOl) { out.push("</ol>"); inOl = false; } out.push('<ul class="md-content">'); inUl = true; }
+      out.push(`<li>${ul[1]}</li>`); continue;
     }
+
+    const ol = line.match(/^\d+\. (.+)/);
+    if (ol) {
+      if (!inOl) { if (inUl) { out.push("</ul>"); inUl = false; } out.push('<ol class="md-content">'); inOl = true; }
+      out.push(`<li>${ol[1]}</li>`); continue;
+    }
+
+    if (line.trim() === "") { closeList(); out.push("<br>"); continue; }
+    if (!inUl && !inOl) out.push(`<p>${line}</p>`);
+    else out.push(`<li>${line}</li>`);
   }
-  if (current.body.trim()) sections.push(current);
-  if (!sections.length) sections.push({ title: "Results", body: text });
-  return sections;
+  closeList();
+  return `<div class="md-content">${out.join("")}</div>`;
 }
-
-function getSectionIcon(title) {
-  const t = title.toLowerCase();
-  if (t.includes("overview") || t.includes("campaign")) return "📋";
-  if (t.includes("post") || t.includes("messaging")) return "📱";
-  if (t.includes("audience")) return "👥";
-  if (t.includes("insight") || t.includes("observation")) return "📈";
-  if (t.includes("feature") || t.includes("product")) return "✨";
-  if (t.includes("engagement")) return "💬";
-  return "📌";
-}
-
-function renderMdToHtml(text) {
   // Protect code blocks
   const blocks = [];
   text = text.replace(/```[\s\S]*?```/g, m => { blocks.push(m); return `\x00CODE${blocks.length-1}\x00`; });
