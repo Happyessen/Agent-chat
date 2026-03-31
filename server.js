@@ -169,6 +169,21 @@ app.post("/chat", async (req, res) => {
     return res.status(400).json({ error: "messages array is required" });
   }
 
+  const userMessage = messages[messages.length - 1].content;
+  const shouldDirectN8n = /travel|postpaid|campaign/i.test(userMessage);
+
+  if (shouldDirectN8n) {
+    // Direct pass-through to n8n for precise intent handling
+    try {
+      console.log("Direct n8n call with message:", userMessage);
+      const result = await callN8nWebhook(userMessage, session_id);
+      return res.json({ type: "n8n_direct", message: userMessage, result });
+    } catch (err) {
+      console.error("Direct n8n call failed:", err);
+      return res.status(500).json({ error: err.message });
+    }
+  }
+
   res.setHeader("Content-Type", "text/event-stream");
   res.setHeader("Cache-Control", "no-cache");
   res.setHeader("Connection", "keep-alive");
