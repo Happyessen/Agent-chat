@@ -473,7 +473,7 @@ function handleToolResult(params) {
   setStatus("ready", "Response received");
 
   const area = document.getElementById("content-area");
-  area.innerHTML = "";
+  // area.innerHTML = ""; // Keep conversation history
 
   // Get the raw text response
   const raw =
@@ -485,7 +485,10 @@ function handleToolResult(params) {
   if (raw) {
     renderMarkdown(raw, area);
   } else {
-    area.innerHTML = `<div class="error-box">No response content received from agent.</div>`;
+    console.log("No raw content:", params);
+    const errorDiv = document.createElement("div");
+    errorDiv.innerHTML = `<div class="error-box">No response content received from agent. Params: ${JSON.stringify(params)}</div>`;
+    area.appendChild(errorDiv);
   }
 }
 
@@ -566,63 +569,6 @@ function renderMdToHtml(text) {
   closeList();
   return `<div class="md-content">${out.join("")}</div>`;
 }
-  // Protect code blocks
-  const blocks = [];
-  text = text.replace(/```[\s\S]*?```/g, m => { blocks.push(m); return `\x00CODE${blocks.length-1}\x00`; });
-
-  let h = esc(text);
-
-  // Restore code blocks
-  h = h.replace(/\x00CODE(\d+)\x00/g, (_, i) =>
-    `<pre style="background:var(--surface-2);border:1px solid var(--border);border-radius:6px;padding:10px;overflow-x:auto;font-size:12px;font-family:monospace">${esc(blocks[+i].replace(/```\w*\n?|```/g,"").trim())}</pre>`
-  );
-
-  // Inline code
-  h = h.replace(/`([^`]+)`/g, "<code>$1</code>");
-  // Bold
-  h = h.replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>");
-  // Italic
-  h = h.replace(/\*(.+?)\*/g, "<em>$1</em>");
-  // Links
-  h = h.replace(/\[([^\]]+)\]\((https?:\/\/[^\)]+)\)/g,
-    '<a href="$2" target="_blank" rel="noopener">$1 ↗</a>');
-
-  // Process lines
-  const lines = h.split("\n");
-  const out = [];
-  let inUl = false, inOl = false;
-
-  const closeList = () => {
-    if (inUl) { out.push("</ul>"); inUl = false; }
-    if (inOl) { out.push("</ol>"); inOl = false; }
-  };
-
-  for (const line of lines) {
-    if (/^### /.test(line)) { closeList(); out.push(`<h3>${line.slice(4)}</h3>`); continue; }
-    if (/^## /.test(line))  { closeList(); out.push(`<h2>${line.slice(3)}</h2>`); continue; }
-    if (/^# /.test(line))   { closeList(); out.push(`<h2>${line.slice(2)}</h2>`); continue; }
-    if (/^---+$/.test(line.trim())) { closeList(); out.push("<hr>"); continue; }
-
-    const ul = line.match(/^[\-\*] (.+)/);
-    if (ul) {
-      if (!inUl) { if (inOl) { out.push("</ol>"); inOl = false; } out.push('<ul class="md-content">'); inUl = true; }
-      out.push(`<li>${ul[1]}</li>`); continue;
-    }
-
-    const ol = line.match(/^\d+\. (.+)/);
-    if (ol) {
-      if (!inOl) { if (inUl) { out.push("</ul>"); inUl = false; } out.push('<ol class="md-content">'); inOl = true; }
-      out.push(`<li>${ol[1]}</li>`); continue;
-    }
-
-    if (line.trim() === "") { closeList(); out.push("<br>"); continue; }
-    if (!inUl && !inOl) out.push(`<p>${line}</p>`);
-    else out.push(`<li>${line}</li>`);
-  }
-  closeList();
-  return `<div class="md-content">${out.join("")}</div>`;
-}
-
 // ── Helpers ───────────────────────────────────────────────────────────────────
 function makeCard(title) {
   const card = document.createElement("div");
@@ -684,13 +630,14 @@ async function sendMessage() {
   area.insertBefore(bubble, area.firstChild);
 
   try {
-    await rpcRequest("tools/call", {
+    const result = await rpcRequest("tools/call", {
       name: "send_message",
       arguments: {
         message: text,
         session_id: "session_" + Date.now(),
       },
     });
+    handleToolResult(result);
   } catch (err) {
     setStatus("ready", "Error — try again");
     area.innerHTML = `<div class="error-box">Failed to send: ${err?.message ?? err}</div>`;
