@@ -330,6 +330,55 @@ button {
 .btn-ghost:hover { background: var(--surface); color: var(--text); }
 
 /* Error */
+/* Input area */
+.input-wrap {
+  position: sticky;
+  bottom: 0;
+  background: var(--bg);
+  padding: 12px 0 4px;
+  margin-top: 12px;
+}
+.input-box {
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 8px 10px;
+  transition: border-color 0.15s;
+}
+.input-box:focus-within { border-color: rgba(99,102,241,0.5); }
+#user-input {
+  flex: 1;
+  background: transparent;
+  border: none;
+  outline: none;
+  color: var(--text);
+  font-family: inherit;
+  font-size: 13px;
+  line-height: 1.5;
+  resize: none;
+  max-height: 120px;
+  min-height: 22px;
+}
+#user-input::placeholder { color: var(--text-muted); }
+#send-btn {
+  width: 30px; height: 30px;
+  border-radius: 8px;
+  background: var(--accent);
+  color: #fff;
+  border: none;
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+  font-size: 14px;
+  transition: background 0.15s, opacity 0.15s;
+  padding: 0;
+}
+#send-btn:hover:not(:disabled) { background: #4f52d9; }
+#send-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+.input-hint { font-size: 11px; color: var(--text-muted); text-align: center; margin-top: 6px; }
 .error-box {
   background: rgba(239,68,68,0.08);
   border: 1px solid rgba(239,68,68,0.2);
@@ -361,6 +410,14 @@ button {
       <div class="icon">💡</div>
       <p>Ask about a campaign, send a topic like<br><strong>"travelling campaign"</strong> or <strong>"postpaid offer"</strong></p>
     </div>
+  </div>
+
+  <div class="input-wrap">
+    <div class="input-box">
+      <textarea id="user-input" rows="1" placeholder="Ask about a campaign..." onkeydown="handleKey(event)" oninput="autoResize(this)"></textarea>
+      <button id="send-btn" onclick="sendMessage()" title="Send"></main>#10148;</button>
+    </div>
+    <p class="input-hint">Enter to send &middot; Shift+Enter for new line</p>
   </div>
 
 </main>
@@ -657,6 +714,53 @@ function esc(s) {
   return String(s ?? "")
     .replace(/&/g,"&amp;").replace(/</g,"&lt;")
     .replace(/>/g,"&gt;").replace(/"/g,"&quot;");
+}
+// ── Send message to agent ───────────────────────────────────────────────────
+async function sendMessage() {
+  const input = document.getElementById("user-input");
+  const text = input.value.trim();
+  if (!text) return;
+
+  const sendBtn = document.getElementById("send-btn");
+  sendBtn.disabled = true;
+  input.value = "";
+  input.style.height = "auto";
+
+  setStatus("loading", "Sending to agent...");
+
+  // Show user bubble
+  const area = document.getElementById("content-area");
+  const emptyState = document.getElementById("empty-state");
+  if (emptyState) emptyState.remove();
+
+  const bubble = document.createElement("div");
+  bubble.style.cssText = "background:var(--accent-light);border:1px solid rgba(99,102,241,0.2);border-radius:10px;padding:10px 14px;margin-bottom:12px;font-size:13px;color:var(--text)";
+  bubble.textContent = text;
+  area.insertBefore(bubble, area.firstChild);
+
+  try {
+    await rpcRequest("tools/call", {
+      name: "send_message",
+      arguments: {
+        message: text,
+        session_id: "session_" + Date.now(),
+      },
+    });
+  } catch (err) {
+    setStatus("ready", "Error — try again");
+    area.innerHTML = `<div class="error-box">Failed to send: ${err?.message ?? err}</div>`;
+  } finally {
+    sendBtn.disabled = false;
+  }
+}
+
+function handleKey(e) {
+  if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendMessage(); }
+}
+
+function autoResize(el) {
+  el.style.height = "auto";
+  el.style.height = Math.min(el.scrollHeight, 120) + "px";
 }
 </script>
 </body>
