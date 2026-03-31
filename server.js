@@ -241,7 +241,7 @@ Use the run_n8n_agent tool to handle all user requests, then present the results
   }
 });
 
-// ── Health check ──────────────────────────────────────────────────────────────
+// ── Health checks ──────────────────────────────────────────────────────────────
 app.get("/health", (_, res) => res.json({ status: "ok" }));
 
 const PORT = process.env.PORT ?? 3001;
