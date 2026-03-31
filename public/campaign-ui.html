@@ -1,390 +1,663 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <title>Campaign Assistant</title>
-  <style>
-    * {
-      box-sizing: border-box;
-    }
+<meta charset="utf-8"/>
+<title>Campaign Assistant</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
 
-    :root {
-      --color-primary: #111bf5;
-      --color-primary-dark: #0d0fa8;
-      --color-bg: #f6f8fb;
-      --color-bg-card: #ffffff;
-      --color-text-primary: #0b0b0f;
-      --color-text-secondary: #6c768a;
-      --color-border: #cad3e0;
-      --color-success: #10a05f;
-      --spacing-2: 8px;
-      --spacing-3: 12px;
-      --spacing-4: 16px;
-      --spacing-5: 20px;
-      --radius-2: 10px;
-      --radius-3: 16px;
-    }
+:root {
+  --bg: #1a1a1a;
+  --surface: #242424;
+  --surface-2: #2e2e2e;
+  --border: rgba(255,255,255,0.08);
+  --accent: #6366f1;
+  --accent-light: rgba(99,102,241,0.15);
+  --text: #f0f0f0;
+  --text-muted: #888;
+  --green: #10b981;
+  --green-light: rgba(16,185,129,0.12);
+}
 
-    html,
-    body {
-      width: 100%;
-      min-height: 100%;
-      margin: 0;
-      padding: 0;
-      background: var(--color-bg);
-      color: var(--color-text-primary);
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Helvetica Neue", sans-serif;
-      font-size: 14px;
-      line-height: 1.5;
-    }
+html, body {
+  width: 100%;
+  min-height: 100vh;
+  background: var(--bg);
+  color: var(--text);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-size: 14px;
+  line-height: 1.6;
+}
 
-    body {
-      padding: var(--spacing-4);
-    }
+body { padding: 16px; }
 
-    main {
-      max-width: 540px;
-      margin: 0 auto;
-    }
+main { max-width: 560px; margin: 0 auto; }
 
-    .card {
-      background: var(--color-bg-card);
-      border-radius: var(--radius-3);
-      padding: var(--spacing-5);
-      box-shadow: 0 12px 24px rgba(15, 23, 42, 0.08);
-      margin-bottom: var(--spacing-4);
-    }
+/* Header */
+.header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 18px;
+}
 
-    .header {
-      margin-bottom: var(--spacing-5);
-    }
+.header-icon {
+  width: 32px; height: 32px;
+  background: var(--accent-light);
+  border: 1px solid var(--accent);
+  border-radius: 8px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 16px;
+  flex-shrink: 0;
+}
 
-    .header h1 {
-      margin: 0 0 var(--spacing-2) 0;
-      font-size: 1.375rem;
-      font-weight: 600;
-      color: var(--color-text-primary);
-    }
+.header h1 {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text);
+}
 
-    .header p {
-      margin: 0;
-      color: var(--color-text-secondary);
-      font-size: 0.95rem;
-    }
+.header p {
+  font-size: 12px;
+  color: var(--text-muted);
+  margin-top: 1px;
+}
 
-    .section {
-      margin-bottom: var(--spacing-5);
-    }
+/* Status bar */
+.status-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  margin-bottom: 14px;
+  font-size: 12px;
+  color: var(--text-muted);
+}
 
-    .section-title {
-      font-size: 0.95rem;
-      font-weight: 600;
-      color: var(--color-text-primary);
-      margin: 0 0 var(--spacing-3) 0;
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
-      opacity: 0.7;
-    }
+.status-dot {
+  width: 7px; height: 7px;
+  border-radius: 50%;
+  background: var(--green);
+  flex-shrink: 0;
+}
 
-    .section-content {
-      display: flex;
-      flex-direction: column;
-      gap: var(--spacing-2);
-    }
+.status-dot.loading {
+  background: var(--accent);
+  animation: pulse 1s ease-in-out infinite;
+}
 
-    .badge {
-      display: inline-flex;
-      align-items: center;
-      padding: var(--spacing-2) var(--spacing-3);
-      background: #f2f4fb;
-      border-radius: var(--radius-2);
-      font-size: 0.85rem;
-      font-weight: 500;
-      color: var(--color-text-primary);
-      width: fit-content;
-    }
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
 
-    .badge.primary {
-      background: #eef0ff;
-      color: var(--color-primary);
-    }
+/* Empty state */
+.empty-state {
+  text-align: center;
+  padding: 40px 20px;
+  color: var(--text-muted);
+}
 
-    .highlight {
-      font-weight: 600;
-      color: var(--color-text-primary);
-    }
+.empty-state .icon { font-size: 32px; margin-bottom: 12px; }
+.empty-state p { font-size: 13px; line-height: 1.7; }
 
-    .list-item {
-      padding: var(--spacing-3);
-      background: #f8f9fc;
-      border-radius: var(--radius-2);
-      border-left: 3px solid var(--color-primary);
-      font-size: 0.95rem;
-      line-height: 1.6;
-    }
+/* Result card */
+.result-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  overflow: hidden;
+  margin-bottom: 12px;
+}
 
-    .list-item strong {
-      color: var(--color-primary);
-    }
+.result-card-header {
+  padding: 10px 14px;
+  background: var(--surface-2);
+  border-bottom: 1px solid var(--border);
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
 
-    .action-buttons {
-      display: flex;
-      gap: var(--spacing-3);
-      margin-top: var(--spacing-4);
-    }
+.result-card-body {
+  padding: 14px;
+}
 
-    button {
-      flex: 1;
-      padding: var(--spacing-3) var(--spacing-4);
-      border: none;
-      border-radius: var(--radius-2);
-      font-size: 0.95rem;
-      font-weight: 600;
-      cursor: pointer;
-      transition: all 0.2s ease;
-    }
+/* Markdown rendering */
+.md-content h1, .md-content h2 {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text);
+  margin: 16px 0 8px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid var(--border);
+}
 
-    .btn-primary {
-      background: var(--color-primary);
-      color: white;
-    }
+.md-content h1:first-child,
+.md-content h2:first-child { margin-top: 0; }
 
-    .btn-primary:hover:not(:disabled) {
-      background: var(--color-primary-dark);
-      box-shadow: 0 4px 12px rgba(17, 27, 245, 0.3);
-    }
+.md-content h3 {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--accent);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin: 14px 0 6px;
+}
 
-    .btn-primary:disabled {
-      opacity: 0.6;
-      cursor: not-allowed;
-    }
+.md-content h3:first-child { margin-top: 0; }
 
-    .btn-secondary {
-      background: transparent;
-      color: var(--color-primary);
-      border: 1px solid var(--color-border);
-    }
+.md-content p {
+  font-size: 13px;
+  color: var(--text);
+  margin-bottom: 8px;
+  line-height: 1.65;
+}
 
-    .btn-secondary:hover:not(:disabled) {
-      background: var(--color-bg);
-      border-color: var(--color-primary);
-    }
+.md-content ul, .md-content ol {
+  padding-left: 0;
+  margin: 6px 0 10px;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
 
-    .loader {
-      display: inline-block;
-      width: 14px;
-      height: 14px;
-      border: 2px solid rgba(17, 27, 245, 0.2);
-      border-top-color: var(--color-primary);
-      border-radius: 50%;
-      animation: spin 0.6s linear infinite;
-      margin-right: var(--spacing-2);
-    }
+.md-content li {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+  font-size: 13px;
+  color: var(--text);
+  line-height: 1.55;
+}
 
-    @keyframes spin {
-      to {
-        transform: rotate(360deg);
-      }
-    }
+.md-content li::before {
+  content: "›";
+  color: var(--accent);
+  font-weight: 700;
+  flex-shrink: 0;
+  margin-top: 1px;
+}
 
-    .success-indicator {
-      color: var(--color-success);
-      margin-right: var(--spacing-2);
-    }
-  </style>
+.md-content strong { color: var(--text); font-weight: 600; }
+
+.md-content a {
+  color: var(--accent);
+  text-decoration: none;
+  border-bottom: 1px solid rgba(99,102,241,0.3);
+}
+
+.md-content a:hover { border-bottom-color: var(--accent); }
+
+.md-content code {
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 1px 5px;
+  font-size: 12px;
+  font-family: "SF Mono", "Fira Code", monospace;
+}
+
+.md-content hr {
+  border: none;
+  border-top: 1px solid var(--border);
+  margin: 12px 0;
+}
+
+/* Post cards */
+.post-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.post-card {
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 10px 12px;
+}
+
+.post-card-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--accent);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 5px;
+}
+
+.post-card-caption {
+  font-size: 13px;
+  color: var(--text);
+  line-height: 1.55;
+  margin-bottom: 6px;
+}
+
+.post-card-meta {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.post-meta-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.post-meta-tag.likes { color: var(--green); }
+
+.post-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  color: var(--accent);
+  text-decoration: none;
+  border-bottom: 1px solid rgba(99,102,241,0.3);
+}
+
+/* Stat chips */
+.stat-row {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin: 8px 0;
+}
+
+.stat-chip {
+  background: var(--accent-light);
+  border: 1px solid rgba(99,102,241,0.2);
+  border-radius: 6px;
+  padding: 4px 10px;
+  font-size: 12px;
+  color: var(--accent);
+  font-weight: 500;
+}
+
+.stat-chip.green {
+  background: var(--green-light);
+  border-color: rgba(16,185,129,0.2);
+  color: var(--green);
+}
+
+/* Action buttons */
+.actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 14px;
+}
+
+button {
+  padding: 8px 16px;
+  border: none;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.btn-primary {
+  background: var(--accent);
+  color: #fff;
+  flex: 1;
+}
+
+.btn-primary:hover:not(:disabled) {
+  background: #4f52d9;
+  box-shadow: 0 4px 12px rgba(99,102,241,0.35);
+}
+
+.btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.btn-ghost {
+  background: transparent;
+  color: var(--text-muted);
+  border: 1px solid var(--border);
+}
+
+.btn-ghost:hover { background: var(--surface); color: var(--text); }
+
+/* Error */
+.error-box {
+  background: rgba(239,68,68,0.08);
+  border: 1px solid rgba(239,68,68,0.2);
+  border-radius: 8px;
+  padding: 12px;
+  font-size: 13px;
+  color: #f87171;
+}
+</style>
 </head>
 <body>
-  <main>
-    <div class="card">
-      <div class="header">
-        <h1>Campaign Assistant</h1>
-        <p id="subtitle">Send a message about your campaign idea to get started.</p>
-      </div>
+<main>
 
-      <div class="section" id="campaign-section" style="display: none;">
-        <div class="section-title">Campaign Overview</div>
-        <div class="section-content">
-          <div class="badge primary" id="campaign-theme"></div>
-          <p id="campaign-desc"></p>
-        </div>
-      </div>
-
-      <div class="section" id="audience-section" style="display: none;">
-        <div class="section-title">Target Audience</div>
-        <div class="section-content" id="audience-content"></div>
-      </div>
-
-      <div class="section" id="messaging-section" style="display: none;">
-        <div class="section-title">Key Messaging</div>
-        <div class="section-content" id="messaging-content"></div>
-      </div>
-
-      <div class="section" id="insights-section" style="display: none;">
-        <div class="section-title">Campaign Insights</div>
-        <div class="section-content" id="insights-content"></div>
-      </div>
-
-      <div id="message-area" style="text-align: center; padding: var(--spacing-4);">
-        <p id="message-text" style="color: var(--color-text-secondary); margin: 0;"></p>
-      </div>
-
-      <div class="action-buttons" id="actions">
-        <button class="btn-primary" id="refine-btn" style="display: none;">Refine Campaign</button>
-        <button class="btn-secondary" id="clear-btn" style="display: none;">Start Over</button>
-      </div>
+  <div class="header">
+    <div class="header-icon">📊</div>
+    <div>
+      <h1>Campaign Assistant</h1>
+      <p>Powered by your n8n agent</p>
     </div>
-  </main>
+  </div>
 
-  <script type="module">
-    let rpcId = 0;
-    const pendingRequests = new Map();
-    let currentData = null;
+  <div class="status-bar" id="status-bar">
+    <div class="status-dot" id="status-dot"></div>
+    <span id="status-text">Ready — send a message to begin</span>
+  </div>
 
-    const rpcNotify = (method, params) => {
-      window.parent.postMessage({ jsonrpc: "2.0", method, params }, "*");
-    };
+  <div id="content-area">
+    <div class="empty-state" id="empty-state">
+      <div class="icon">💡</div>
+      <p>Ask about a campaign, send a topic like<br><strong>"travelling campaign"</strong> or <strong>"postpaid offer"</strong></p>
+    </div>
+  </div>
 
-    const rpcRequest = (method, params) =>
-      new Promise((resolve, reject) => {
-        const id = ++rpcId;
-        pendingRequests.set(id, { resolve, reject });
-        window.parent.postMessage(
-          { jsonrpc: "2.0", id, method, params },
-          "*"
-        );
-      });
+</main>
 
-    window.addEventListener("message", (event) => {
-      if (event.source !== window.parent) return;
-      const message = event.data;
-      if (!message || message.jsonrpc !== "2.0") return;
+<script type="module">
+let rpcId = 0;
+const pendingRequests = new Map();
 
-      // Handle responses
-      if (typeof message.id === "number") {
-        const pending = pendingRequests.get(message.id);
-        if (!pending) return;
-        pendingRequests.delete(message.id);
+const rpcNotify = (method, params) =>
+  window.parent.postMessage({ jsonrpc: "2.0", method, params }, "*");
 
-        if (message.error) {
-          pending.reject(message.error);
-          return;
-        }
+const rpcRequest = (method, params) =>
+  new Promise((resolve, reject) => {
+    const id = ++rpcId;
+    pendingRequests.set(id, { resolve, reject });
+    window.parent.postMessage({ jsonrpc: "2.0", id, method, params }, "*");
+  });
 
-        pending.resolve(message.result);
-        return;
-      }
+window.addEventListener("message", (event) => {
+  if (event.source !== window.parent) return;
+  const msg = event.data;
+  if (!msg || msg.jsonrpc !== "2.0") return;
 
-      // Handle notifications (tool results)
-      if (typeof message.method !== "string") return;
-      if (message.method === "ui/notifications/tool-result") {
-        updateFromResponse(message.params);
-      }
-    }, { passive: true });
+  if (typeof msg.id === "number") {
+    const p = pendingRequests.get(msg.id);
+    if (!p) return;
+    pendingRequests.delete(msg.id);
+    msg.error ? p.reject(msg.error) : p.resolve(msg.result);
+    return;
+  }
 
-    const initializeBridge = async () => {
-      const appInfo = { name: "campaign-assistant", version: "0.1.0" };
-      const appCapabilities = {};
-      const protocolVersion = "2026-01-26";
+  if (msg.method === "ui/notifications/tool-result") {
+    handleToolResult(msg.params);
+  }
+}, { passive: true });
 
-      try {
-        await rpcRequest("ui/initialize", {
-          appInfo,
-          appCapabilities,
-          protocolVersion,
-        });
-        rpcNotify("ui/notifications/initialized", {});
-      } catch (error) {
-        console.error("Failed to initialize bridge:", error);
-      }
-    };
-
-    const bridgeReady = initializeBridge();
-
-    const updateFromResponse = (response) => {
-      if (!response?.structuredContent) return;
-
-      const data = response.structuredContent;
-      currentData = data;
-
-      // Display campaign overview
-      if (data.theme) {
-        document.getElementById("campaign-section").style.display = "block";
-        document.getElementById("campaign-theme").textContent = data.theme;
-        if (data.description) {
-          document.getElementById("campaign-desc").textContent = data.description;
-        }
-      }
-
-      // Display audience
-      if (data.audience && Array.isArray(data.audience)) {
-        document.getElementById("audience-section").style.display = "block";
-        const audienceContent = document.getElementById("audience-content");
-        audienceContent.innerHTML = data.audience
-          .map((item) => `<div class="list-item">${item}</div>`)
-          .join("");
-      }
-
-      // Display messaging
-      if (data.messaging && Array.isArray(data.messaging)) {
-        document.getElementById("messaging-section").style.display = "block";
-        const messagingContent = document.getElementById("messaging-content");
-        messagingContent.innerHTML = data.messaging
-          .map((item) => `<div class="list-item">${item}</div>`)
-          .join("");
-      }
-
-      // Display insights
-      if (data.insights && Array.isArray(data.insights)) {
-        document.getElementById("insights-section").style.display = "block";
-        const insightsContent = document.getElementById("insights-content");
-        insightsContent.innerHTML = data.insights
-          .map((item) => `<div class="list-item">${item}</div>`)
-          .join("");
-      }
-
-      // Show action buttons
-      document.getElementById("refine-btn").style.display = "block";
-      document.getElementById("clear-btn").style.display = "block";
-      document.getElementById("message-area").style.display = "none";
-    };
-
-    // Action button handlers
-    document.getElementById("refine-btn").addEventListener("click", async () => {
-      const refineBtn = document.getElementById("refine-btn");
-      refineBtn.disabled = true;
-      refineBtn.innerHTML = '<span class="loader"></span>Refining...';
-
-      try {
-        await rpcRequest("tools/call", {
-          name: "send_message",
-          arguments: {
-            message: `Refine and expand the campaign plan based on best practices and add more specific tactical recommendations.`,
-            session_id: `session_${Date.now()}`,
-          },
-        });
-      } catch (error) {
-        console.error("Refine failed:", error);
-      } finally {
-        refineBtn.disabled = false;
-        refineBtn.innerHTML = "Refine Campaign";
-      }
+// Init bridge
+(async () => {
+  try {
+    await rpcRequest("ui/initialize", {
+      appInfo: { name: "campaign-assistant", version: "1.0.0" },
+      appCapabilities: {},
+      protocolVersion: "2026-01-26",
     });
+    rpcNotify("ui/notifications/initialized", {});
+  } catch (e) {
+    console.error("Bridge init failed", e);
+  }
+})();
 
-    document.getElementById("clear-btn").addEventListener("click", () => {
-      // Reset UI
-      document.getElementById("campaign-section").style.display = "none";
-      document.getElementById("audience-section").style.display = "none";
-      document.getElementById("messaging-section").style.display = "none";
-      document.getElementById("insights-section").style.display = "none";
-      document.getElementById("message-area").style.display = "block";
-      document.getElementById("refine-btn").style.display = "none";
-      document.getElementById("clear-btn").style.display = "none";
-      document.getElementById("message-text").textContent = "Send a message about your campaign idea to get started.";
-      currentData = null;
+// ── Handle tool result ────────────────────────────────────────────────────────
+function handleToolResult(params) {
+  setStatus("ready", "Response received");
+
+  const area = document.getElementById("content-area");
+  area.innerHTML = "";
+
+  // Try structured content first
+  if (params?.structuredContent) {
+    renderStructured(params.structuredContent, area);
+    return;
+  }
+
+  // Fall back to raw text / markdown
+  const raw =
+    params?.content?.[0]?.text ??
+    params?.result ??
+    params?.message ??
+    (typeof params === "string" ? params : null);
+
+  if (raw) {
+    renderMarkdown(raw, area);
+  } else {
+    area.innerHTML = `<div class="error-box">No response content received from agent.</div>`;
+  }
+}
+
+// ── Render structured JSON ────────────────────────────────────────────────────
+function renderStructured(data, area) {
+  // Campaign overview
+  if (data.theme || data.description) {
+    const card = makeCard("📋 Campaign Overview");
+    const body = card.querySelector(".result-card-body");
+
+    if (data.theme) {
+      const chip = document.createElement("div");
+      chip.className = "stat-row";
+      chip.innerHTML = `<span class="stat-chip">${esc(data.theme)}</span>`;
+      body.appendChild(chip);
+    }
+    if (data.description) {
+      const p = document.createElement("p");
+      p.className = "md-content";
+      p.style.cssText = "font-size:13px;color:var(--text);margin-top:8px";
+      p.textContent = data.description;
+      body.appendChild(p);
+    }
+    area.appendChild(card);
+  }
+
+  // Audience
+  if (Array.isArray(data.audience)) {
+    const card = makeCard("👥 Target Audience");
+    card.querySelector(".result-card-body").innerHTML =
+      `<ul class="md-content">${data.audience.map(i => `<li>${esc(i)}</li>`).join("")}</ul>`;
+    area.appendChild(card);
+  }
+
+  // Messaging
+  if (Array.isArray(data.messaging)) {
+    const card = makeCard("💬 Key Messaging");
+    card.querySelector(".result-card-body").innerHTML =
+      `<ul class="md-content">${data.messaging.map(i => `<li>${esc(i)}</li>`).join("")}</ul>`;
+    area.appendChild(card);
+  }
+
+  // Insights
+  if (Array.isArray(data.insights)) {
+    const card = makeCard("📈 Insights");
+    card.querySelector(".result-card-body").innerHTML =
+      `<ul class="md-content">${data.insights.map(i => `<li>${esc(i)}</li>`).join("")}</ul>`;
+    area.appendChild(card);
+  }
+
+  // Posts
+  if (Array.isArray(data.posts)) {
+    const card = makeCard("📱 Campaign Posts");
+    const grid = document.createElement("div");
+    grid.className = "post-grid";
+    data.posts.forEach((post, i) => {
+      const pc = document.createElement("div");
+      pc.className = "post-card";
+      pc.innerHTML = `
+        <div class="post-card-label">Post ${String.fromCharCode(65 + i)}</div>
+        <div class="post-card-caption">${esc(post.caption ?? "")}</div>
+        <div class="post-card-meta">
+          ${post.likes != null ? `<span class="post-meta-tag likes">♥ ${post.likes}</span>` : ""}
+          ${post.link ? `<a class="post-link" href="${esc(post.link)}" target="_blank">View post ↗</a>` : ""}
+        </div>`;
+      grid.appendChild(pc);
     });
+    card.querySelector(".result-card-body").appendChild(grid);
+    area.appendChild(card);
+  }
 
-    // Show message on load
-    document.getElementById("message-area").style.display = "block";
-  </script>
+  addActions(area);
+}
+
+// ── Render raw markdown ───────────────────────────────────────────────────────
+function renderMarkdown(text, area) {
+  // Detect if response has campaign posts structure
+  const hasPostLinks = /\[View post\]/i.test(text) || /instagram\.com/i.test(text);
+
+  if (hasPostLinks) {
+    // Split into sections by ## headings
+    const sections = splitBySections(text);
+    sections.forEach(({ title, body }) => {
+      const icon = getSectionIcon(title);
+      const card = makeCard(`${icon} ${title || "Overview"}`);
+      card.querySelector(".result-card-body").innerHTML = renderMdToHtml(body);
+      area.appendChild(card);
+    });
+  } else {
+    // Single card with full markdown
+    const card = makeCard("📋 Campaign Results");
+    card.querySelector(".result-card-body").innerHTML = renderMdToHtml(text);
+    area.appendChild(card);
+  }
+
+  addActions(area);
+}
+
+function splitBySections(text) {
+  const lines = text.split("\n");
+  const sections = [];
+  let current = { title: "", body: "" };
+
+  for (const line of lines) {
+    const h2 = line.match(/^##\s+(.+)/);
+    if (h2) {
+      if (current.body.trim()) sections.push(current);
+      current = { title: h2[1].trim(), body: "" };
+    } else {
+      current.body += line + "\n";
+    }
+  }
+  if (current.body.trim()) sections.push(current);
+  if (!sections.length) sections.push({ title: "Results", body: text });
+  return sections;
+}
+
+function getSectionIcon(title) {
+  const t = title.toLowerCase();
+  if (t.includes("overview") || t.includes("campaign")) return "📋";
+  if (t.includes("post") || t.includes("messaging")) return "📱";
+  if (t.includes("audience")) return "👥";
+  if (t.includes("insight") || t.includes("observation")) return "📈";
+  if (t.includes("feature") || t.includes("product")) return "✨";
+  if (t.includes("engagement")) return "💬";
+  return "📌";
+}
+
+function renderMdToHtml(text) {
+  // Protect code blocks
+  const blocks = [];
+  text = text.replace(/```[\s\S]*?```/g, m => { blocks.push(m); return `\x00CODE${blocks.length-1}\x00`; });
+
+  let h = esc(text);
+
+  // Restore code blocks
+  h = h.replace(/\x00CODE(\d+)\x00/g, (_, i) =>
+    `<pre style="background:var(--surface-2);border:1px solid var(--border);border-radius:6px;padding:10px;overflow-x:auto;font-size:12px;font-family:monospace">${esc(blocks[+i].replace(/```\w*\n?|```/g,"").trim())}</pre>`
+  );
+
+  // Inline code
+  h = h.replace(/`([^`]+)`/g, "<code>$1</code>");
+  // Bold
+  h = h.replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>");
+  // Italic
+  h = h.replace(/\*(.+?)\*/g, "<em>$1</em>");
+  // Links
+  h = h.replace(/\[([^\]]+)\]\((https?:\/\/[^\)]+)\)/g,
+    '<a href="$2" target="_blank" rel="noopener">$1 ↗</a>');
+
+  // Process lines
+  const lines = h.split("\n");
+  const out = [];
+  let inUl = false, inOl = false;
+
+  const closeList = () => {
+    if (inUl) { out.push("</ul>"); inUl = false; }
+    if (inOl) { out.push("</ol>"); inOl = false; }
+  };
+
+  for (const line of lines) {
+    if (/^### /.test(line)) { closeList(); out.push(`<h3>${line.slice(4)}</h3>`); continue; }
+    if (/^## /.test(line))  { closeList(); out.push(`<h2>${line.slice(3)}</h2>`); continue; }
+    if (/^# /.test(line))   { closeList(); out.push(`<h2>${line.slice(2)}</h2>`); continue; }
+    if (/^---+$/.test(line.trim())) { closeList(); out.push("<hr>"); continue; }
+
+    const ul = line.match(/^[\-\*] (.+)/);
+    if (ul) {
+      if (!inUl) { if (inOl) { out.push("</ol>"); inOl = false; } out.push('<ul class="md-content">'); inUl = true; }
+      out.push(`<li>${ul[1]}</li>`); continue;
+    }
+
+    const ol = line.match(/^\d+\. (.+)/);
+    if (ol) {
+      if (!inOl) { if (inUl) { out.push("</ul>"); inUl = false; } out.push('<ol class="md-content">'); inOl = true; }
+      out.push(`<li>${ol[1]}</li>`); continue;
+    }
+
+    if (line.trim() === "") { closeList(); out.push("<br>"); continue; }
+    if (!inUl && !inOl) out.push(`<p>${line}</p>`);
+    else out.push(`<li>${line}</li>`);
+  }
+  closeList();
+  return `<div class="md-content">${out.join("")}</div>`;
+}
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
+function makeCard(title) {
+  const card = document.createElement("div");
+  card.className = "result-card";
+  card.innerHTML = `
+    <div class="result-card-header">${title}</div>
+    <div class="result-card-body"></div>`;
+  return card;
+}
+
+function addActions(area) {
+  const div = document.createElement("div");
+  div.className = "actions";
+  div.innerHTML = `
+    <button class="btn-ghost" id="clear-btn">Clear</button>`;
+  div.querySelector("#clear-btn").onclick = () => {
+    area.innerHTML = `
+      <div class="empty-state" id="empty-state">
+        <div class="icon">💡</div>
+        <p>Ask about a campaign, send a topic like<br><strong>"travelling campaign"</strong> or <strong>"postpaid offer"</strong></p>
+      </div>`;
+    setStatus("ready", "Ready — send a message to begin");
+  };
+  area.appendChild(div);
+}
+
+function setStatus(type, text) {
+  const dot = document.getElementById("status-dot");
+  document.getElementById("status-text").textContent = text;
+  dot.className = "status-dot" + (type === "loading" ? " loading" : "");
+}
+
+function esc(s) {
+  return String(s ?? "")
+    .replace(/&/g,"&amp;").replace(/</g,"&lt;")
+    .replace(/>/g,"&gt;").replace(/"/g,"&quot;");
+}
+</script>
 </body>
 </html>
