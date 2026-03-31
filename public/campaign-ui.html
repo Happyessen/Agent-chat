@@ -1,0 +1,390 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Campaign Assistant</title>
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    :root {
+      --color-primary: #111bf5;
+      --color-primary-dark: #0d0fa8;
+      --color-bg: #f6f8fb;
+      --color-bg-card: #ffffff;
+      --color-text-primary: #0b0b0f;
+      --color-text-secondary: #6c768a;
+      --color-border: #cad3e0;
+      --color-success: #10a05f;
+      --spacing-2: 8px;
+      --spacing-3: 12px;
+      --spacing-4: 16px;
+      --spacing-5: 20px;
+      --radius-2: 10px;
+      --radius-3: 16px;
+    }
+
+    html,
+    body {
+      width: 100%;
+      min-height: 100%;
+      margin: 0;
+      padding: 0;
+      background: var(--color-bg);
+      color: var(--color-text-primary);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Helvetica Neue", sans-serif;
+      font-size: 14px;
+      line-height: 1.5;
+    }
+
+    body {
+      padding: var(--spacing-4);
+    }
+
+    main {
+      max-width: 540px;
+      margin: 0 auto;
+    }
+
+    .card {
+      background: var(--color-bg-card);
+      border-radius: var(--radius-3);
+      padding: var(--spacing-5);
+      box-shadow: 0 12px 24px rgba(15, 23, 42, 0.08);
+      margin-bottom: var(--spacing-4);
+    }
+
+    .header {
+      margin-bottom: var(--spacing-5);
+    }
+
+    .header h1 {
+      margin: 0 0 var(--spacing-2) 0;
+      font-size: 1.375rem;
+      font-weight: 600;
+      color: var(--color-text-primary);
+    }
+
+    .header p {
+      margin: 0;
+      color: var(--color-text-secondary);
+      font-size: 0.95rem;
+    }
+
+    .section {
+      margin-bottom: var(--spacing-5);
+    }
+
+    .section-title {
+      font-size: 0.95rem;
+      font-weight: 600;
+      color: var(--color-text-primary);
+      margin: 0 0 var(--spacing-3) 0;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      opacity: 0.7;
+    }
+
+    .section-content {
+      display: flex;
+      flex-direction: column;
+      gap: var(--spacing-2);
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      padding: var(--spacing-2) var(--spacing-3);
+      background: #f2f4fb;
+      border-radius: var(--radius-2);
+      font-size: 0.85rem;
+      font-weight: 500;
+      color: var(--color-text-primary);
+      width: fit-content;
+    }
+
+    .badge.primary {
+      background: #eef0ff;
+      color: var(--color-primary);
+    }
+
+    .highlight {
+      font-weight: 600;
+      color: var(--color-text-primary);
+    }
+
+    .list-item {
+      padding: var(--spacing-3);
+      background: #f8f9fc;
+      border-radius: var(--radius-2);
+      border-left: 3px solid var(--color-primary);
+      font-size: 0.95rem;
+      line-height: 1.6;
+    }
+
+    .list-item strong {
+      color: var(--color-primary);
+    }
+
+    .action-buttons {
+      display: flex;
+      gap: var(--spacing-3);
+      margin-top: var(--spacing-4);
+    }
+
+    button {
+      flex: 1;
+      padding: var(--spacing-3) var(--spacing-4);
+      border: none;
+      border-radius: var(--radius-2);
+      font-size: 0.95rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .btn-primary {
+      background: var(--color-primary);
+      color: white;
+    }
+
+    .btn-primary:hover:not(:disabled) {
+      background: var(--color-primary-dark);
+      box-shadow: 0 4px 12px rgba(17, 27, 245, 0.3);
+    }
+
+    .btn-primary:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+
+    .btn-secondary {
+      background: transparent;
+      color: var(--color-primary);
+      border: 1px solid var(--color-border);
+    }
+
+    .btn-secondary:hover:not(:disabled) {
+      background: var(--color-bg);
+      border-color: var(--color-primary);
+    }
+
+    .loader {
+      display: inline-block;
+      width: 14px;
+      height: 14px;
+      border: 2px solid rgba(17, 27, 245, 0.2);
+      border-top-color: var(--color-primary);
+      border-radius: 50%;
+      animation: spin 0.6s linear infinite;
+      margin-right: var(--spacing-2);
+    }
+
+    @keyframes spin {
+      to {
+        transform: rotate(360deg);
+      }
+    }
+
+    .success-indicator {
+      color: var(--color-success);
+      margin-right: var(--spacing-2);
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <div class="card">
+      <div class="header">
+        <h1>Campaign Assistant</h1>
+        <p id="subtitle">Send a message about your campaign idea to get started.</p>
+      </div>
+
+      <div class="section" id="campaign-section" style="display: none;">
+        <div class="section-title">Campaign Overview</div>
+        <div class="section-content">
+          <div class="badge primary" id="campaign-theme"></div>
+          <p id="campaign-desc"></p>
+        </div>
+      </div>
+
+      <div class="section" id="audience-section" style="display: none;">
+        <div class="section-title">Target Audience</div>
+        <div class="section-content" id="audience-content"></div>
+      </div>
+
+      <div class="section" id="messaging-section" style="display: none;">
+        <div class="section-title">Key Messaging</div>
+        <div class="section-content" id="messaging-content"></div>
+      </div>
+
+      <div class="section" id="insights-section" style="display: none;">
+        <div class="section-title">Campaign Insights</div>
+        <div class="section-content" id="insights-content"></div>
+      </div>
+
+      <div id="message-area" style="text-align: center; padding: var(--spacing-4);">
+        <p id="message-text" style="color: var(--color-text-secondary); margin: 0;"></p>
+      </div>
+
+      <div class="action-buttons" id="actions">
+        <button class="btn-primary" id="refine-btn" style="display: none;">Refine Campaign</button>
+        <button class="btn-secondary" id="clear-btn" style="display: none;">Start Over</button>
+      </div>
+    </div>
+  </main>
+
+  <script type="module">
+    let rpcId = 0;
+    const pendingRequests = new Map();
+    let currentData = null;
+
+    const rpcNotify = (method, params) => {
+      window.parent.postMessage({ jsonrpc: "2.0", method, params }, "*");
+    };
+
+    const rpcRequest = (method, params) =>
+      new Promise((resolve, reject) => {
+        const id = ++rpcId;
+        pendingRequests.set(id, { resolve, reject });
+        window.parent.postMessage(
+          { jsonrpc: "2.0", id, method, params },
+          "*"
+        );
+      });
+
+    window.addEventListener("message", (event) => {
+      if (event.source !== window.parent) return;
+      const message = event.data;
+      if (!message || message.jsonrpc !== "2.0") return;
+
+      // Handle responses
+      if (typeof message.id === "number") {
+        const pending = pendingRequests.get(message.id);
+        if (!pending) return;
+        pendingRequests.delete(message.id);
+
+        if (message.error) {
+          pending.reject(message.error);
+          return;
+        }
+
+        pending.resolve(message.result);
+        return;
+      }
+
+      // Handle notifications (tool results)
+      if (typeof message.method !== "string") return;
+      if (message.method === "ui/notifications/tool-result") {
+        updateFromResponse(message.params);
+      }
+    }, { passive: true });
+
+    const initializeBridge = async () => {
+      const appInfo = { name: "campaign-assistant", version: "0.1.0" };
+      const appCapabilities = {};
+      const protocolVersion = "2026-01-26";
+
+      try {
+        await rpcRequest("ui/initialize", {
+          appInfo,
+          appCapabilities,
+          protocolVersion,
+        });
+        rpcNotify("ui/notifications/initialized", {});
+      } catch (error) {
+        console.error("Failed to initialize bridge:", error);
+      }
+    };
+
+    const bridgeReady = initializeBridge();
+
+    const updateFromResponse = (response) => {
+      if (!response?.structuredContent) return;
+
+      const data = response.structuredContent;
+      currentData = data;
+
+      // Display campaign overview
+      if (data.theme) {
+        document.getElementById("campaign-section").style.display = "block";
+        document.getElementById("campaign-theme").textContent = data.theme;
+        if (data.description) {
+          document.getElementById("campaign-desc").textContent = data.description;
+        }
+      }
+
+      // Display audience
+      if (data.audience && Array.isArray(data.audience)) {
+        document.getElementById("audience-section").style.display = "block";
+        const audienceContent = document.getElementById("audience-content");
+        audienceContent.innerHTML = data.audience
+          .map((item) => `<div class="list-item">${item}</div>`)
+          .join("");
+      }
+
+      // Display messaging
+      if (data.messaging && Array.isArray(data.messaging)) {
+        document.getElementById("messaging-section").style.display = "block";
+        const messagingContent = document.getElementById("messaging-content");
+        messagingContent.innerHTML = data.messaging
+          .map((item) => `<div class="list-item">${item}</div>`)
+          .join("");
+      }
+
+      // Display insights
+      if (data.insights && Array.isArray(data.insights)) {
+        document.getElementById("insights-section").style.display = "block";
+        const insightsContent = document.getElementById("insights-content");
+        insightsContent.innerHTML = data.insights
+          .map((item) => `<div class="list-item">${item}</div>`)
+          .join("");
+      }
+
+      // Show action buttons
+      document.getElementById("refine-btn").style.display = "block";
+      document.getElementById("clear-btn").style.display = "block";
+      document.getElementById("message-area").style.display = "none";
+    };
+
+    // Action button handlers
+    document.getElementById("refine-btn").addEventListener("click", async () => {
+      const refineBtn = document.getElementById("refine-btn");
+      refineBtn.disabled = true;
+      refineBtn.innerHTML = '<span class="loader"></span>Refining...';
+
+      try {
+        await rpcRequest("tools/call", {
+          name: "send_message",
+          arguments: {
+            message: `Refine and expand the campaign plan based on best practices and add more specific tactical recommendations.`,
+            session_id: `session_${Date.now()}`,
+          },
+        });
+      } catch (error) {
+        console.error("Refine failed:", error);
+      } finally {
+        refineBtn.disabled = false;
+        refineBtn.innerHTML = "Refine Campaign";
+      }
+    });
+
+    document.getElementById("clear-btn").addEventListener("click", () => {
+      // Reset UI
+      document.getElementById("campaign-section").style.display = "none";
+      document.getElementById("audience-section").style.display = "none";
+      document.getElementById("messaging-section").style.display = "none";
+      document.getElementById("insights-section").style.display = "none";
+      document.getElementById("message-area").style.display = "block";
+      document.getElementById("refine-btn").style.display = "none";
+      document.getElementById("clear-btn").style.display = "none";
+      document.getElementById("message-text").textContent = "Send a message about your campaign idea to get started.";
+      currentData = null;
+    });
+
+    // Show message on load
+    document.getElementById("message-area").style.display = "block";
+  </script>
+</body>
+</html>

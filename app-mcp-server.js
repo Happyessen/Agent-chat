@@ -4,6 +4,9 @@
 // Run:     node app-mcp-server.js
 
 import { createServer } from "node:http";
+import { readFileSync } from "node:fs";
+import { fileURLToPath } from "url";
+import { dirname, join } from "path";
 import "dotenv/config";
 import {
   registerAppTool,
@@ -14,12 +17,23 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
 import { z } from "zod";
 
+const __dirname = dirname(fileURLToPath(import.meta.url));
+
 // Configuration
 const AGENT_API = process.env.AGENT_API_URL ?? "http://localhost:3001";
 const PORT = process.env.MCP_PORT ?? 8787;
 const MCP_PATH = "/mcp";
 
 console.log("MCP server config:", { AGENT_API, PORT, MCP_PATH });
+
+// Load campaign UI HTML
+let campaignUIHtml = "";
+try {
+  const campaignUIPath = join(__dirname, "public", "campaign-ui.html");
+  campaignUIHtml = readFileSync(campaignUIPath, "utf8");
+} catch (err) {
+  console.warn("Failed to load campaign UI HTML:", err.message);
+}
 
 // Input schemas for tools
 const sendMessageSchema = {
@@ -124,7 +138,9 @@ function createAppServer() {
       description:
         "Send a message to your n8n agent and get a formatted response. Use this for campaign analysis, data retrieval, and complex queries.",
       inputSchema: sendMessageSchema,
-      _meta: {},
+      _meta: {
+        ui: { resourceUri: "ui://agent/campaign.html" },
+      },
     },
     async (args) => {
       const message = args?.message;
@@ -136,9 +152,38 @@ function createAppServer() {
 
       try {
         const result = await callAgent(message, args?.session_id);
+        
+        // Parse structured content from the response
+        // The agent response is in markdown/text format
+        // We'll extract campaign data for the UI to display
+        const parsedData = {
+          message: result.message,
+          session_id: result.session_id,
+          theme: "Campaign Plan",
+          description: result.message.substring(0, 200) + "...",
+          audience: [],
+          messaging: [],
+          insights: [],
+        };
+
+        // Extract sections from markdown response
+        const sections = result.message.split("###");
+        sections.forEach((section) => {
+          if (section.includes("Audience")) {
+            const lines = section.split("\n").filter(l => l.trim().startsWith("-"));
+            parsedData.audience = lines.map(l => l.replace(/^-\s*/, "").trim());
+          } else if (section.includes("Messaging") || section.includes("Campaign Message")) {
+            const lines = section.split("\n").filter(l => l.trim().startsWith("-"));
+            parsedData.messaging = lines.map(l => l.replace(/^-\s*/, "").trim());
+          } else if (section.includes("Insights") || section.includes("Observations")) {
+            const lines = section.split("\n").filter(l => l.trim().startsWith("-"));
+            parsedData.insights = lines.map(l => l.replace(/^-\s*/, "").trim());
+          }
+        });
+        
         return {
           content: [{ type: "text", text: result.message }],
-          structuredContent: result,
+          structuredContent: parsedData,
         };
       } catch (err) {
         return {
@@ -187,198 +232,19 @@ function createAppServer() {
     }
   );
 
-  // ── Register UI Resource (optional web component) ────────────────────────
+  // ── Register UI Resource (campaign assistant) ──────────────────────────
 
   registerAppResource(
     server,
-    "agent-ui",
-    "ui://agent/dashboard.html",
+    "campaign-ui",
+    "ui://agent/campaign.html",
     {},
     async () => ({
       contents: [
         {
-          uri: "ui://agent/dashboard.html",
+          uri: "ui://agent/campaign.html",
           mimeType: RESOURCE_MIME_TYPE,
-          text: `<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Agent Chat Dashboard</title>
-  <style>
-    :root {
-      color: #0b0b0f;
-      font-family: "Inter", system-ui, -apple-system, sans-serif;
-    }
-    html, body {
-      width: 100%;
-      min-height: 100%;
-      margin: 0;
-      padding: 0;
-      box-sizing: border-box;
-    }
-    body {
-      background: #f6f8fb;
-      padding: 16px;
-    }
-    main {
-      width: 100%;
-      max-width: 500px;
-      margin: 0 auto;
-      background: white;
-      border-radius: 16px;
-      padding: 24px;
-      box-shadow: 0 12px 24px rgba(15, 23, 42, 0.08);
-    }
-    h1 {
-      margin: 0 0 24px;
-      font-size: 1.5rem;
-      color: #0b0b0f;
-    }
-    .status {
-      padding: 12px;
-      border-radius: 8px;
-      margin-bottom: 16px;
-      font-size: 0.95rem;
-    }
-    .status.online {
-      background: #e8f5e9;
-      color: #2e7d32;
-      border: 1px solid #4caf50;
-    }
-    .status.offline {
-      background: #ffebee;
-      color: #c62828;
-      border: 1px solid #f44336;
-    }
-    .info-box {
-      background: #f5f5f5;
-      padding: 16px;
-      border-radius: 8px;
-      margin-top: 16px;
-      font-size: 0.9rem;
-      line-height: 1.6;
-      color: #666;
-    }
-    button {
-      background: #111bf5;
-      color: white;
-      border: none;
-      border-radius: 8px;
-      padding: 10px 16px;
-      font-weight: 600;
-      cursor: pointer;
-      width: 100%;
-      margin-top: 16px;
-    }
-    button:hover {
-      background: #0d1ac9;
-    }
-    button:disabled {
-      opacity: 0.6;
-      cursor: not-allowed;
-    }
-  </style>
-</head>
-<body>
-  <main>
-    <h1>Agent Chat Dashboard</h1>
-    <div id="status" class="status offline">Checking status...</div>
-    <div class="info-box">
-      <strong>Welcome!</strong> This is your agent chat interface. Use the tools available above to:
-      <ul style="margin: 8px 0; padding-left: 20px;">
-        <li>Send messages to your n8n agent</li>
-        <li>Analyze campaigns and data</li>
-        <li>Run complex queries</li>
-      </ul>
-    </div>
-    <button id="refresh-btn" onclick="checkStatus()">Check Status</button>
-  </main>
-
-  <script type="module">
-    let rpcId = 0;
-    const pendingRequests = new Map();
-
-    const rpcRequest = (method, params) =>
-      new Promise((resolve, reject) => {
-        const id = ++rpcId;
-        pendingRequests.set(id, { resolve, reject });
-        window.parent.postMessage(
-          { jsonrpc: "2.0", id, method, params },
-          "*"
-        );
-      });
-
-    window.addEventListener("message", (event) => {
-      if (event.source !== window.parent) return;
-      const message = event.data;
-      if (!message || message.jsonrpc !== "2.0") return;
-
-      if (typeof message.id === "number") {
-        const pending = pendingRequests.get(message.id);
-        if (!pending) return;
-        pendingRequests.delete(message.id);
-
-        if (message.error) {
-          pending.reject(message.error);
-          return;
-        }
-        pending.resolve(message.result);
-      }
-    }, { passive: true });
-
-    async function initializeBridge() {
-      const appInfo = { name: "agent-chat-dashboard", version: "1.0.0" };
-      const appCapabilities = {};
-      const protocolVersion = "2026-01-26";
-
-      try {
-        await rpcRequest("ui/initialize", {
-          appInfo,
-          appCapabilities,
-          protocolVersion,
-        });
-        window.parent.postMessage({
-          jsonrpc: "2.0",
-          method: "ui/notifications/initialized",
-          params: {},
-        }, "*");
-      } catch (error) {
-        console.error("Failed to initialize bridge:", error);
-      }
-    }
-
-    window.checkStatus = async function() {
-      const btn = document.getElementById("refresh-btn");
-      const statusDiv = document.getElementById("status");
-      btn.disabled = true;
-      btn.textContent = "Checking...";
-
-      try {
-        const result = await rpcRequest("tools/call", {
-          name: "check_agent_health",
-          arguments: {},
-        });
-        const status = result.structuredContent?.status || "unknown";
-        statusDiv.className = "status " + (status === "online" ? "online" : "offline");
-        statusDiv.textContent = status === "online"
-          ? "✓ Agent is online and ready"
-          : "✗ Agent is offline";
-      } catch (error) {
-        statusDiv.className = "status offline";
-        statusDiv.textContent = "✗ Agent check failed: " + error.message;
-      } finally {
-        btn.disabled = false;
-        btn.textContent = "Check Status";
-      }
-    };
-
-    initializeBridge();
-    window.checkStatus();
-  </script>
-</body>
-</html>
-`,
+          text: campaignUIHtml,
         },
       ],
     })
