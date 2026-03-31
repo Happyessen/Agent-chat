@@ -475,21 +475,45 @@ function handleToolResult(params) {
   const area = document.getElementById("content-area");
   // area.innerHTML = ""; // Keep conversation history
 
-  // Get the raw text response
+  // Get the raw text response - try multiple extraction paths
   const raw =
-    params?.content?.[0]?.text ??
-    params?.result ??
-    params?.message ??
+    params?.text ??                      // Direct text field
+    params?.content?.[0]?.text ??       // MCP standard format
+    params?.result ??                    // Result field
+    params?.message ??                   // Message field
+    params?.output ??                    // Output field
     (typeof params === "string" ? params : null);
 
   if (raw) {
-    renderMarkdown(raw, area);
+    // Check if this is an error message
+    if (typeof raw === "string" && raw.includes("Error:")) {
+      renderError(raw, area);
+    } else {
+      renderMarkdown(raw, area);
+    }
   } else {
     console.log("No raw content:", params);
     const errorDiv = document.createElement("div");
-    errorDiv.innerHTML = `<div class="error-box">No response content received from agent. Params: ${JSON.stringify(params)}</div>`;
+    const debugJson = JSON.stringify(params);
+    errorDiv.innerHTML = `<div class="error-box">No response content received from agent. Debug info: <code>${esc(debugJson)}</code></div>`;
     area.appendChild(errorDiv);
   }
+}
+
+// ── Render error message ──────────────────────────────────────────────────────
+function renderError(errorText, area) {
+  const card = makeCard("⚠️ Error");
+  const body = card.querySelector(".result-card-body");
+  
+  // Create error display with proper escaping to prevent HTML injection
+  const errorLines = errorText.split("\n").slice(0, 5); // Show first 5 lines
+  const errorHtml = errorLines
+    .map(line => `<p style="color:var(--error,#ef4444);font-family:monospace;font-size:12px;margin:4px 0;white-space:pre-wrap;word-break:break-word">${esc(line)}</p>`)
+    .join("");
+  
+  body.innerHTML = `<div>${errorHtml}</div>`;
+  area.appendChild(card);
+  addActions(area);
 }
 
 // ── Render structured JSON ────────────────────────────────────────────────────
